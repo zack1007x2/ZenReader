@@ -1,1 +1,1 @@
-include ':app', ':SideMenu_lib'
+include ':app'

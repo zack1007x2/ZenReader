@@ -1,31 +1,27 @@
 package com.example.zack.zenreader;
 
 import android.app.Activity;
-import android.content.Intent;
-import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
 
-
-public class MainActivity extends Activity implements Broadcast.onRecieveListener {
-
-    private Button btSendB, btMCMode;
+/**
+ * Created by Zack on 15/6/29.
+ */
+public class Shelf extends Activity implements Multicast.onMRecieveListener {
+    private Button btSendM,btBCMode;
     private EditText etMessage;
-    private WifiManager wm;
-    private WifiConfiguration wifiCon;
-//    private Method wifiApConfigurationMethod;
-//    private String buffer;
-//    private Thread networkThread;
-    private PacketReceiverTask startRecieveTask;
+    private MultiPacketReceiverTask startRecieveTask;
     private final static int RECIEVE_MESSAGE = 1;
     private String mPacket;
+    WifiManager.MulticastLock mLock;
 
     private Handler mHandler = new Handler(Looper.getMainLooper()) {
 
@@ -35,58 +31,76 @@ public class MainActivity extends Activity implements Broadcast.onRecieveListene
             switch (msg.what) {
                 case RECIEVE_MESSAGE:
                     etMessage.setText(mPacket);
-                    Toast.makeText(MainActivity.this,"Recieve packet content = "+mPacket,Toast
+                    Toast.makeText(Shelf.this, "Recieve packet content = " + mPacket, Toast
                             .LENGTH_SHORT).show();
                     break;
             }
         }
     };
 
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
-        btSendB = (Button)findViewById(R.id.btSend);
-        btMCMode = (Button)findViewById(R.id.btMode);
+        btSendM = (Button)findViewById(R.id.btSend);
+        btBCMode = (Button)findViewById(R.id.btMode);
+        btSendM.setText("Send MultiCast");
+        btBCMode.setText("BroadCastMode");
         etMessage = (EditText)findViewById(R.id.etMessage);
-        btSendB.setOnClickListener(new View.OnClickListener() {
+
+        btSendM.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Broadcast.send(MainActivity.this, etMessage.getText().toString(), MainActivity.this);
+                Toast.makeText(Shelf.this,etMessage.getText().toString(),Toast.LENGTH_SHORT);
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        Multicast.send(Shelf.this, etMessage.getText().toString(), Shelf.this);
+                    }
+                }).start();
+
+
             }
         });
-        btMCMode.setOnClickListener(new View.OnClickListener() {
+        btBCMode.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Intent i = new Intent();
-                i.setClass(MainActivity.this,Shelf.class);
-                startActivity(i);
                 finish();
             }
         });
 
-
     }
+
 
     @Override
     protected void onResume() {
         super.onResume();
-        startRecieveTask = new PacketReceiverTask();
-        startRecieveTask.execute(MainActivity.this);
+        Log.d("ASDFG","onResume ");
+        startRecieveTask = new MultiPacketReceiverTask();
+        startRecieveTask.execute(Shelf.this);
+
+        WifiManager wifi = (WifiManager) getSystemService(getApplicationContext().WIFI_SERVICE);
+        if(wifi!=null) {
+            mLock = wifi.createMulticastLock("mylock");
+            mLock.acquire();
+        }
 
     }
 
     @Override
     protected void onPause() {
         super.onPause();
+
         startRecieveTask.cancel(true);
+        if(mLock.isHeld())
+            mLock.release();
     }
 
 
+
+
     @Override
-    public void onRecieve(String packet) {
+    public void onMRecieve(String packet) {
         mPacket = packet;
         mHandler.sendEmptyMessage(RECIEVE_MESSAGE);
     }

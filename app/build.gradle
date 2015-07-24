@@ -6,7 +6,7 @@ android {
 
     defaultConfig {
         applicationId "com.example.zack.zenreader"
-        minSdkVersion 21
+        minSdkVersion 15
         targetSdkVersion 22
         versionCode 1
         versionName "1.0"
@@ -20,6 +20,4 @@ android {
 }
 
 dependencies {
-    compile fileTree(dir: 'libs', include: ['*.jar'])
-    compile project(':SideMenu_lib')
 }
